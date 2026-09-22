@@ -96,7 +96,10 @@ public class Basic_OpModeTest extends LinearOpMode {
             double leftPower;
             double rightPower;
 
-            // Choose to drive using either Tank Mode, or POV Mode
+
+
+
+
             // Comment out the method that's not used.  The default below is POV.
 
             // POV Mode uses left stick to go forward, and right stick to turn.
@@ -106,12 +109,12 @@ public class Basic_OpModeTest extends LinearOpMode {
             leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
             rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
-            // Tank Mode uses one stick to control each wheel.
-            // - This requires no math, but it is hard to drive forward slowly and keep straight.
-            // leftPower  = -gamepad1.left_stick_y ;
-            // rightPower = -gamepad1.right_stick_y ;
+            if (gamepad1.a==true) {
+                leftMotor.setPower(drive);
+                rightMotor.setPower(drive);
+            }
 
-            // Send calculated power to wheels
+            // Send calc;ulated power to wheels
             leftMotor.setPower(leftPower);
             rightMotor.setPower(rightPower);
 
@@ -122,3 +125,4 @@ public class Basic_OpModeTest extends LinearOpMode {
         }
     }
 }
+
