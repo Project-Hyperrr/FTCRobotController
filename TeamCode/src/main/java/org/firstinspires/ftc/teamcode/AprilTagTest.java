@@ -42,30 +42,12 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
+import org.firstinspires.ftc.vision.opencv.ImageRegion;
+import org.firstinspires.ftc.vision.opencv.PredominantColorProcessor;
 
 import java.util.List;
 
-/*
- * This OpMode illustrates the basics of AprilTag recognition and pose estimation, using
- * the easy way.
- *
- * Note: See ConceptAprilTag.java for how to add a camera compatibility quirk
- *
- * For an introduction to AprilTags, see the FTC-DOCS link below:
- * https://ftc-docs.firstinspires.org/en/latest/apriltag/vision_portal/apriltag_intro/apriltag-intro.html
- *
- * In this sample, any visible tag ID will be detected and displayed, but only tags that are included in the default
- * "TagLibrary" will have their position and orientation information displayed.  This default TagLibrary contains
- * the current Season's AprilTags and a small set of "test Tags" in the high number range.
- *
- * When an AprilTag in the TagLibrary is detected, the SDK provides location and orientation of the tag, relative to the camera.
- * This information is provided in the "ftcPose" member of the returned "detection", and is explained in the ftc-docs page linked below.
- * https://ftc-docs.firstinspires.org/apriltag-detection-values
- *
- * To experiment with using AprilTags to navigate, try out these two driving samples:
- * RobotAutoDriveToAprilTagOmni and RobotAutoDriveToAprilTagTank
- */
-@TeleOp(name = "Concept: AprilTag Easy", group = "Concept")
+@TeleOp(name = "AprilTagTest", group = "Tests")
 public class AprilTagTest extends LinearOpMode {
 
     // Hardware \\
@@ -73,15 +55,37 @@ public class AprilTagTest extends LinearOpMode {
     private DcMotor rightMotor = null;
     private Servo rightServo = null;
 
-    // AprilTag Variables \\
+    // Camera Variables \\
     private static final boolean USE_WEBCAM = true;  // We're using a webcam so this is true.
-
-    private AprilTagProcessor aprilTag; // Our instance of the AprilTag processor.
     private VisionPortal visionPortal; // Our instance of the vision portal.
 
+    // AprilTag Variables \\
+    private AprilTagProcessor aprilTag; // Our instance of the AprilTag processor.
     private int aprilTagTargetID = -1; // The tag to target, or -1 for any.
 
-    // Detection Variables ||
+    // ColorBlob Variables \\
+    /*
+    This is a regular constructor. It may look odd with the new lines, but it's
+    read as just one statement because it does not have semicolons.
+    It's no different from typing PredominantColorProcessor.Builder().setRoi().setSwatches().Build()
+     */
+    PredominantColorProcessor colorSensor = new PredominantColorProcessor.Builder()
+            // The Region of Interest to check the color of.
+            .setRoi(ImageRegion.asUnityCenterCoordinates(-0.1, 0.1, 0.1, -0.1))
+            // All the preset colors to look for.
+            .setSwatches(
+                    PredominantColorProcessor.Swatch.ARTIFACT_GREEN,
+                    PredominantColorProcessor.Swatch.ARTIFACT_PURPLE,
+                    PredominantColorProcessor.Swatch.RED,
+                    PredominantColorProcessor.Swatch.BLUE,
+                    PredominantColorProcessor.Swatch.YELLOW,
+                    PredominantColorProcessor.Swatch.BLACK,
+                    PredominantColorProcessor.Swatch.WHITE)
+            .build();
+    // end
+
+
+    // Detection Variables \\
     private boolean targetFound  = false;
     private String targetName    = "none";
     private int    targetID      = 0;
@@ -216,6 +220,12 @@ public class AprilTagTest extends LinearOpMode {
                 telemetry.addData("Range",  "%5.1f inches", targetRange);
                 telemetry.addData("Bearing","%3.0f degrees", targetBearing);
                 telemetry.addData("Yaw","%3.0f degrees", targetYaw);
+            } else { // If there isn't an AprilTag, send ColorBlob information instead.
+                PredominantColorProcessor.Result result = colorSensor.getAnalysis();
+                telemetry.addData("Best Match", result.closestSwatch);
+                // Formatting returns 3 integers up to 3 digits for Red, Green, and Blue.
+                telemetry.addLine(String.format( "RGB = (%3d, %3d, %3d)", result.RGB[0], result.RGB[1], result.RGB[2]));
+                telemetry.update();
             }
 
             // Check only 50 times a second and give the CPU a break.
@@ -232,10 +242,10 @@ public class AprilTagTest extends LinearOpMode {
      */
     private void initAprilTag() {
 
-        // Create the AprilTag processor the easy way.
+        // Create the AprilTag processor the easy way. TODO: The proper way might be better. Look into it.
         aprilTag = AprilTagProcessor.easyCreateWithDefaults();
 
-        // Create the vision portal the easy way.
+        // Create the vision portal the easy way. TODO: The proper way might be better. Look into it.
         if (USE_WEBCAM) {
             visionPortal = VisionPortal.easyCreateWithDefaults(
                 hardwareMap.get(WebcamName.class, "Webcam 1"), aprilTag);
@@ -281,7 +291,7 @@ public class AprilTagTest extends LinearOpMode {
             }
         }   // end for() loop
 
-        // Add "key" information to telemetry
+        // Add "key" information to telemetry.
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
