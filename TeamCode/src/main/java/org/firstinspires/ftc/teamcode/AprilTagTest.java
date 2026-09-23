@@ -93,6 +93,8 @@ public class AprilTagTest extends LinearOpMode {
     private double targetBearing = 0;
     private double targetYaw     = 0;
 
+    private int ranAmount = 0;
+
     // OpMode \\
     @Override
     public void runOpMode() {
@@ -102,6 +104,7 @@ public class AprilTagTest extends LinearOpMode {
         rightMotor = hardwareMap.get(DcMotor.class, "RightMotor");
 
         rightServo = hardwareMap.get(Servo.class, "rightServo");
+        rightServo.scaleRange(0.0, 1.0);
 
         // Flip the motors on one side so they all move the same direction
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -120,6 +123,10 @@ public class AprilTagTest extends LinearOpMode {
         while (opModeIsActive()) {
             // Reset the found AprilTag
             targetFound = false;
+
+
+            ranAmount += 1;
+            telemetry.addData("Ran", "Ran " + ranAmount + " Times.");
 
             /* This code is commented as it currently isn't in use.
             telemetryAprilTag();
@@ -144,7 +151,6 @@ public class AprilTagTest extends LinearOpMode {
                 } else {
                     telemetry.addData("Target April Tag", aprilTagTargetID);
                 }
-                telemetry.update();
             } else if (gamepad1.dpad_right) {
                 // When dpad right is pressed, increase AprilTag target by 1
                 aprilTagTargetID += 1;
@@ -154,7 +160,6 @@ public class AprilTagTest extends LinearOpMode {
                 } else {
                     telemetry.addData("Target April Tag", aprilTagTargetID);
                 }
-                telemetry.update();
             }
 
 
@@ -185,18 +190,15 @@ public class AprilTagTest extends LinearOpMode {
                         } else {
                             // This tag is in the library but is not a target.
                             telemetry.addData("Skipping Tag", "Tag ID " + singleDetection.id + " is not desired");
-                            telemetry.update();
                         }
 
                     } else {
                         telemetry.addData("Unknown Tag", "Tag is not in SDK Library");
-                        telemetry.update();
                     }
 
                 } else {
                     // TODO: Account for tag clusters.
                     telemetry.addData("Wrong Tag Type", "Tag is not a SingleTag. It may be a cluster or other type.");
-                    telemetry.update();
                 }
 
             }
@@ -209,11 +211,16 @@ public class AprilTagTest extends LinearOpMode {
                 targetBearing Values are -180 (180 degrees left) to 180 (180 degrees right), with 0 at the center.
                 */
                 double currentPos = rightServo.getPosition();
+                telemetry.addData("currentPos", currentPos);
+
                 double targetPos  = 0.5 + (targetBearing / 180.0) * .5; // Translate the bearing to a servoPosition
+                telemetry.addData("targetPos", targetPos);
+
                 double servoDelta = targetPos - currentPos;
 
                 // Set the new position of the servo, but ease it so it doesn't snap around abruptly.
                 rightServo.setPosition(currentPos + servoDelta * 0.1);
+
 
                 // Telemetry the AprilTag Data
                 telemetry.addData("Found", "ID %d (%s)", targetID, targetName);
@@ -225,8 +232,9 @@ public class AprilTagTest extends LinearOpMode {
                 telemetry.addData("Best Match", result.closestSwatch);
                 // Formatting returns 3 integers up to 3 digits for Red, Green, and Blue.
                 telemetry.addLine(String.format( "RGB = (%3d, %3d, %3d)", result.RGB[0], result.RGB[1], result.RGB[2]));
-                telemetry.update();
             }
+
+            telemetry.update();
 
             // Check only 50 times a second and give the CPU a break.
             sleep(20);
