@@ -59,6 +59,7 @@ public class Basic_OpModeTest extends LinearOpMode {
     private DcMotor leftMotor = null;
     private DcMotor rightMotor = null;
     private Servo rightServo = null;
+    public double speed1;
 
     @Override
     public void runOpMode() {
@@ -107,15 +108,28 @@ public class Basic_OpModeTest extends LinearOpMode {
             leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
             rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
+            speed1 = 0.5;
+
             if (gamepad1.a) {
                 leftMotor.setPower(1.0);
                 rightMotor.setPower(1.0);
             } else {
 
-                // Send calc;ulated power to wheels
+                // Send calculated power to wheels
                 leftMotor.setPower(leftPower);
                 rightMotor.setPower(rightPower);
             }
+
+
+           if (gamepad1.dpad_down) {
+               speed1 = 0.25;
+               leftMotor.setPower(speed1);
+               rightMotor.setPower(speed1);
+           } else if (gamepad1.dpad_up) {
+               speed1 = 1;
+               leftMotor.setPower(speed1);
+               rightMotor.setPower(speed1);
+           }
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
