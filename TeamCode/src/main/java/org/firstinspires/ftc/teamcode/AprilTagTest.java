@@ -29,17 +29,23 @@
 
 package org.firstinspires.ftc.teamcode;
 
+import android.util.Size;
+
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoController;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 import org.firstinspires.ftc.vision.opencv.ImageRegion;
@@ -54,9 +60,9 @@ public class AprilTagTest extends LinearOpMode {
     private DcMotor leftMotor = null;
     private DcMotor rightMotor = null;
     private Servo rightServo = null;
+    private ServoController servoController;
 
     // Camera Variables \\
-    private static final boolean USE_WEBCAM = true;  // We're using a webcam so this is true.
     private VisionPortal visionPortal; // Our instance of the vision portal.
 
     // AprilTag Variables \\
@@ -64,25 +70,7 @@ public class AprilTagTest extends LinearOpMode {
     private int aprilTagTargetID = -1; // The tag to target, or -1 for any.
 
     // ColorBlob Variables \\
-    /*
-    This is a regular constructor. It may look odd with the new lines, but it's
-    read as just one statement because it does not have semicolons.
-    It's no different from typing PredominantColorProcessor.Builder().setRoi().setSwatches().Build()
-     */
-    PredominantColorProcessor colorSensor = new PredominantColorProcessor.Builder()
-            // The Region of Interest to check the color of.
-            .setRoi(ImageRegion.asUnityCenterCoordinates(-0.1, 0.1, 0.1, -0.1))
-            // All the preset colors to look for.
-            .setSwatches(
-                    PredominantColorProcessor.Swatch.ARTIFACT_GREEN,
-                    PredominantColorProcessor.Swatch.ARTIFACT_PURPLE,
-                    PredominantColorProcessor.Swatch.RED,
-                    PredominantColorProcessor.Swatch.BLUE,
-                    PredominantColorProcessor.Swatch.YELLOW,
-                    PredominantColorProcessor.Swatch.BLACK,
-                    PredominantColorProcessor.Swatch.WHITE)
-            .build();
-    // end
+    PredominantColorProcessor colorSensor;
 
 
     // Detection Variables \\
@@ -93,22 +81,30 @@ public class AprilTagTest extends LinearOpMode {
     private double targetBearing = 0;
     private double targetYaw     = 0;
 
+
+
+    private int ranAmount = 0;
+
     // OpMode \\
     @Override
     public void runOpMode() {
 
-        // Get the configured hardware
+        // Get the configured motors.
         leftMotor  = hardwareMap.get(DcMotor.class, "LeftMotor");
         rightMotor = hardwareMap.get(DcMotor.class, "RightMotor");
-
-        rightServo = hardwareMap.get(Servo.class, "rightServo");
-
-        // Flip the motors on one side so they all move the same direction
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
         rightMotor.setDirection(DcMotor.Direction.FORWARD);
 
-        // See ConceptAprilTag.java for how to add a camera compatibility quirk
-        initAprilTag();
+        // Get the configured servo.
+        rightServo = hardwareMap.get(Servo.class, "rightServo");
+        rightServo.scaleRange(0.0, 1.0);
+        rightServo.setPosition(0.5);
+        rightServo.setDirection(Servo.Direction.FORWARD);
+
+        servoController = rightServo.getController();
+        servoController.pwmEnable();
+
+        initCamera(); // Initialize the vision portal as well as the color blob and april tag sensors.
 
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
@@ -120,6 +116,10 @@ public class AprilTagTest extends LinearOpMode {
         while (opModeIsActive()) {
             // Reset the found AprilTag
             targetFound = false;
+
+
+            ranAmount += 1;
+            telemetry.addData("Ran", "Ran " + ranAmount + " Times.");
 
             /* This code is commented as it currently isn't in use.
             telemetryAprilTag();
@@ -144,7 +144,6 @@ public class AprilTagTest extends LinearOpMode {
                 } else {
                     telemetry.addData("Target April Tag", aprilTagTargetID);
                 }
-                telemetry.update();
             } else if (gamepad1.dpad_right) {
                 // When dpad right is pressed, increase AprilTag target by 1
                 aprilTagTargetID += 1;
@@ -154,7 +153,6 @@ public class AprilTagTest extends LinearOpMode {
                 } else {
                     telemetry.addData("Target April Tag", aprilTagTargetID);
                 }
-                telemetry.update();
             }
 
 
@@ -185,18 +183,15 @@ public class AprilTagTest extends LinearOpMode {
                         } else {
                             // This tag is in the library but is not a target.
                             telemetry.addData("Skipping Tag", "Tag ID " + singleDetection.id + " is not desired");
-                            telemetry.update();
                         }
 
                     } else {
                         telemetry.addData("Unknown Tag", "Tag is not in SDK Library");
-                        telemetry.update();
                     }
 
                 } else {
                     // TODO: Account for tag clusters.
                     telemetry.addData("Wrong Tag Type", "Tag is not a SingleTag. It may be a cluster or other type.");
-                    telemetry.update();
                 }
 
             }
@@ -209,11 +204,16 @@ public class AprilTagTest extends LinearOpMode {
                 targetBearing Values are -180 (180 degrees left) to 180 (180 degrees right), with 0 at the center.
                 */
                 double currentPos = rightServo.getPosition();
+                telemetry.addData("currentPos", currentPos);
+
                 double targetPos  = 0.5 + (targetBearing / 180.0) * .5; // Translate the bearing to a servoPosition
+                telemetry.addData("targetPos", targetPos);
+
                 double servoDelta = targetPos - currentPos;
 
                 // Set the new position of the servo, but ease it so it doesn't snap around abruptly.
                 rightServo.setPosition(currentPos + servoDelta * 0.1);
+
 
                 // Telemetry the AprilTag Data
                 telemetry.addData("Found", "ID %d (%s)", targetID, targetName);
@@ -225,8 +225,9 @@ public class AprilTagTest extends LinearOpMode {
                 telemetry.addData("Best Match", result.closestSwatch);
                 // Formatting returns 3 integers up to 3 digits for Red, Green, and Blue.
                 telemetry.addLine(String.format( "RGB = (%3d, %3d, %3d)", result.RGB[0], result.RGB[1], result.RGB[2]));
-                telemetry.update();
             }
+
+            telemetry.update();
 
             // Check only 50 times a second and give the CPU a break.
             sleep(20);
@@ -234,68 +235,53 @@ public class AprilTagTest extends LinearOpMode {
 
         // Save resources once the OpMode has ended.
         visionPortal.close();
+    }
+
+    private void initCamera() {
+
+        aprilTag = new AprilTagProcessor.Builder()
+
+                .setDrawAxes(true)
+                .setDrawTagOutline(true)
+                .setTagFamily(AprilTagProcessor.TagFamily.TAG_36h11)
+                .setTagLibrary(AprilTagGameDatabase.getCenterStageTagLibrary())
+                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
+                .setDrawCubeProjection(false)
+
+                .build();
+        // end
+
+        colorSensor = new PredominantColorProcessor.Builder()
+                // The Region of Interest to check the color of.
+                .setRoi(ImageRegion.asUnityCenterCoordinates(-0.1, 0.1, 0.1, -0.1))
+                // All the preset colors to look for.
+                .setSwatches(
+                        PredominantColorProcessor.Swatch.ARTIFACT_GREEN,
+                        PredominantColorProcessor.Swatch.ARTIFACT_PURPLE,
+                        PredominantColorProcessor.Swatch.RED,
+                        PredominantColorProcessor.Swatch.BLUE,
+                        PredominantColorProcessor.Swatch.YELLOW,
+                        PredominantColorProcessor.Swatch.BLACK,
+                        PredominantColorProcessor.Swatch.WHITE)
+                .build();
+        // end
+
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+
+            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+            builder.setCameraResolution(new Size(640, 480));
+            builder.enableLiveView(true); // Enable live preview of camera
+            builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
+            builder.setAutoStopLiveView(false);
+
+            // Set and enable the processors.
+            builder.addProcessor(aprilTag);
+            builder.addProcessor(colorSensor);
+
+            // Build the Vision Portal, using the above settings.
+            visionPortal = builder.build();
+        // end
 
     }
 
-    /**
-     * Initialize the AprilTag processor.
-     */
-    private void initAprilTag() {
-
-        // Create the AprilTag processor the easy way. TODO: The proper way might be better. Look into it.
-        aprilTag = AprilTagProcessor.easyCreateWithDefaults();
-
-        // Create the vision portal the easy way. TODO: The proper way might be better. Look into it.
-        if (USE_WEBCAM) {
-            visionPortal = VisionPortal.easyCreateWithDefaults(
-                hardwareMap.get(WebcamName.class, "Webcam 1"), aprilTag);
-        } else {
-            visionPortal = VisionPortal.easyCreateWithDefaults(
-                BuiltinCameraDirection.BACK, aprilTag);
-        }
-
-    }
-
-    // The following code is commented out because I don't believe it's currently necessary.
-
-    /*
-    // Add telemetry about AprilTag detections.
-    private void telemetryAprilTag() {
-
-        List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-        telemetry.addData("# AprilTags Detected", currentDetections.size());
-
-        // Step through the list of detections and display info for each one.
-        for (AprilTagDetection detection : currentDetections) {
-
-            if (detection instanceof AprilTagSingleDetection) {
-                AprilTagSingleDetection singleDet = (AprilTagSingleDetection) detection;
-
-                if (singleDet.metadata != null) {
-                    telemetry.addLine(String.format("\n==== (ID %d) %s", singleDet.id, singleDet.metadata.name));
-                    telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                    telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                    telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-                } else {
-                    telemetry.addLine(String.format("\n==== (ID %d) Unknown", singleDet.id));
-                    telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", singleDet.center.x, singleDet.center.y));
-                }
-
-            }  else {
-                AprilTagClusterDetection clusterDet = (AprilTagClusterDetection) detection;
-                telemetry.addLine(String.format("\n==== Tag Cluster (%s)", clusterDet.metadata.name));
-                telemetry.addLine(String.format("Percent tags found: %d", clusterDet.percentClusterFound));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-            }
-        }   // end for() loop
-
-        // Add "key" information to telemetry.
-        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
-        telemetry.addLine("RBE = Range, Bearing & Elevation");
-
-    }   // end method telemetryAprilTag()
-    */
-}   // end class
+}
