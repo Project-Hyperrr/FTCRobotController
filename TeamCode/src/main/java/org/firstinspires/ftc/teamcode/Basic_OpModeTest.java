@@ -98,8 +98,6 @@ public class Basic_OpModeTest extends LinearOpMode {
 
 
 
-
-
             // Comment out the method that's not used.  The default below is POV.
 
             // POV Mode uses left stick to go forward, and right stick to turn.
@@ -109,14 +107,15 @@ public class Basic_OpModeTest extends LinearOpMode {
             leftPower    = Range.clip(drive + turn, -1.0, 1.0) ;
             rightPower   = Range.clip(drive - turn, -1.0, 1.0) ;
 
-            if (gamepad1.a==true) {
-                leftMotor.setPower(drive);
-                rightMotor.setPower(drive);
-            }
+            if (gamepad1.a) {
+                leftMotor.setPower(1.0);
+                rightMotor.setPower(1.0);
+            } else {
 
-            // Send calc;ulated power to wheels
-            leftMotor.setPower(leftPower);
-            rightMotor.setPower(rightPower);
+                // Send calc;ulated power to wheels
+                leftMotor.setPower(leftPower);
+                rightMotor.setPower(rightPower);
+            }
 
             // Show the elapsed game time and wheel power.
             telemetry.addData("Status", "Run Time: " + runtime.toString());
