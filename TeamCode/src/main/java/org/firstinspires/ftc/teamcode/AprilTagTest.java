@@ -37,6 +37,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.ServoController;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -61,6 +62,8 @@ public class AprilTagTest extends LinearOpMode {
     private DcMotor rightMotor = null;
     private Servo rightServo = null;
     private ServoController servoController;
+
+    private static final double BEARING_DEADZONE = 1;
 
     // Camera Variables \\
     private VisionPortal visionPortal; // Our instance of the vision portal.
@@ -116,10 +119,12 @@ public class AprilTagTest extends LinearOpMode {
         while (opModeIsActive()) {
             // Reset the found AprilTag
             targetFound = false;
+            servoController.pwmEnable();
 
 
             ranAmount += 1;
             telemetry.addData("Ran", "Ran " + ranAmount + " Times.");
+            telemetry.addData("PWM Status", servoController.getPwmStatus());
 
             /* This code is commented as it currently isn't in use.
             telemetryAprilTag();
@@ -201,23 +206,28 @@ public class AprilTagTest extends LinearOpMode {
                 Move the Servo.
 
                 Servo Values are 0-1, with .5 at the center.
-                targetBearing Values are -180 (180 degrees left) to 180 (180 degrees right), with 0 at the center.
+                targetBearing is relative to where the camera is currently pointing.
+                Positive is left (counterclockwise), negative is right, 0 is centered.
                 */
+
                 double currentPos = rightServo.getPosition();
                 telemetry.addData("currentPos", currentPos);
 
-                double targetPos  = 0.5 + (targetBearing / 180.0) * .5; // Translate the bearing to a servoPosition
-                telemetry.addData("targetPos", targetPos);
+                // Only correct when the tag is meaningfully off-center, so the servo doesn't twitch on noise.
+                if (Math.abs(targetBearing) > BEARING_DEADZONE) {
+                    // Convert the bearing to servo units and offset from where the camera points now.
+                    // Positive bearing = tag is left, so subtract. Flip to + if the servo runs away from the tag.
+                    double targetPos = currentPos + (targetBearing / 180.0);
+                    telemetry.addData("targetPos", targetPos);
 
-                double servoDelta = targetPos - currentPos;
-
-                // Set the new position of the servo, but ease it so it doesn't snap around abruptly.
-                rightServo.setPosition(currentPos + servoDelta * 0.1);
+                    // Keep the position within the servo's 0-1 range.
+                    rightServo.setPosition(Range.clip(targetPos, 0.0, 1.0));
+                }
 
 
                 // Telemetry the AprilTag Data
                 telemetry.addData("Found", "ID %d (%s)", targetID, targetName);
-                telemetry.addData("Range",  "%5.1f inches", targetRange);
+                telemetry.addData("Range",  "%5.1f centimeters", targetRange);
                 telemetry.addData("Bearing","%3.0f degrees", targetBearing);
                 telemetry.addData("Yaw","%3.0f degrees", targetYaw);
             } else { // If there isn't an AprilTag, send ColorBlob information instead.
@@ -229,8 +239,8 @@ public class AprilTagTest extends LinearOpMode {
 
             telemetry.update();
 
-            // Check only 50 times a second and give the CPU a break.
-            sleep(20);
+            // Check only 20 times a second and give the CPU a break.
+            sleep(50);
         }
 
         // Save resources once the OpMode has ended.
@@ -244,7 +254,7 @@ public class AprilTagTest extends LinearOpMode {
                 .setDrawAxes(true)
                 .setDrawTagOutline(true)
                 .setTagFamily(AprilTagProcessor.TagFamily.TAG_36h11)
-                .setTagLibrary(AprilTagGameDatabase.getCenterStageTagLibrary())
+                .setTagLibrary(AprilTagGameDatabase.getSampleTagLibrary())
                 .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
                 .setDrawCubeProjection(false)
 
