@@ -69,7 +69,7 @@ public class AprilTagTest extends LinearOpMode {
     private GoBildaPinpointDriver.GoBildaOdometryPods OdometryX = null;
     private GoBildaPinpointDriver.GoBildaOdometryPods OdometryY = null;
 
-    private static final double BEARING_DEADZONE = 1;
+    private static final double BEARING_DEADZONE = 3;
 
     // Camera Variables \\
     private VisionPortal visionPortal; // Our instance of the vision portal.
@@ -108,9 +108,9 @@ public class AprilTagTest extends LinearOpMode {
         rightServo = hardwareMap.get(Servo.class, "rightServo");
         rightServo.scaleRange(0.0, 1.0);
         rightServo.setPosition(0);
-        sleep(5000);
+        sleep(2500);
         rightServo.setPosition(1);
-        sleep(5000);
+        sleep(2500);
         rightServo.setPosition(.5);
 
         rightServo.setDirection(Servo.Direction.FORWARD);
@@ -227,7 +227,7 @@ public class AprilTagTest extends LinearOpMode {
                 // Only correct when the tag is meaningfully off-center, so the servo doesn't twitch on noise.
                 if (Math.abs(targetBearing) > BEARING_DEADZONE) {
                     // Convert the bearing to servo units and offset from where the camera points now.
-                    double targetPos = currentPos + (-targetBearing / 270.0);
+                    double targetPos = currentPos + (-targetBearing / 270.0 * .15);
                     telemetry.addData("targetPos", targetPos);
 
                     // Keep the position within the servo's 0-1 range.
@@ -289,7 +289,7 @@ public class AprilTagTest extends LinearOpMode {
         VisionPortal.Builder builder = new VisionPortal.Builder();
 
             builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-            builder.setCameraResolution(new Size(640, 480));
+            builder.setCameraResolution(new Size(1280, 720));
             builder.enableLiveView(true); // Enable live preview of camera
             builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
             builder.setAutoStopLiveView(false);
