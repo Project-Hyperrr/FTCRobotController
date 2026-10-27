@@ -31,6 +31,7 @@ package org.firstinspires.ftc.teamcode;
 
 import android.util.Size;
 
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -58,21 +59,26 @@ import java.util.List;
 public class AprilTagTest extends LinearOpMode {
 
     // Hardware \\
+    // Motors
     private DcMotor leftMotor = null;
     private DcMotor rightMotor = null;
+    // Servos
     private Servo rightServo = null;
     private ServoController servoController;
+    // Odometers
+    private GoBildaPinpointDriver.GoBildaOdometryPods OdometryX = null;
+    private GoBildaPinpointDriver.GoBildaOdometryPods OdometryY = null;
 
-    private static final double BEARING_DEADZONE = 1;
+    private static final double BEARING_DEADZONE = 3;
 
     // Camera Variables \\
     private VisionPortal visionPortal; // Our instance of the vision portal.
 
-    // AprilTag Variables \\
+    // AprilTag Variables
     private AprilTagProcessor aprilTag; // Our instance of the AprilTag processor.
     private int aprilTagTargetID = -1; // The tag to target, or -1 for any.
 
-    // ColorBlob Variables \\
+    // ColorBlob Variables
     PredominantColorProcessor colorSensor;
 
 
@@ -101,7 +107,12 @@ public class AprilTagTest extends LinearOpMode {
         // Get the configured servo.
         rightServo = hardwareMap.get(Servo.class, "rightServo");
         rightServo.scaleRange(0.0, 1.0);
-        rightServo.setPosition(0.5);
+        rightServo.setPosition(0);
+        sleep(2500);
+        rightServo.setPosition(1);
+        sleep(2500);
+        rightServo.setPosition(.5);
+
         rightServo.setDirection(Servo.Direction.FORWARD);
 
         servoController = rightServo.getController();
@@ -216,8 +227,7 @@ public class AprilTagTest extends LinearOpMode {
                 // Only correct when the tag is meaningfully off-center, so the servo doesn't twitch on noise.
                 if (Math.abs(targetBearing) > BEARING_DEADZONE) {
                     // Convert the bearing to servo units and offset from where the camera points now.
-                    // Positive bearing = tag is left, so subtract. Flip to + if the servo runs away from the tag.
-                    double targetPos = currentPos + (targetBearing / 180.0);
+                    double targetPos = currentPos + (-targetBearing / 270.0 * .15);
                     telemetry.addData("targetPos", targetPos);
 
                     // Keep the position within the servo's 0-1 range.
@@ -279,7 +289,7 @@ public class AprilTagTest extends LinearOpMode {
         VisionPortal.Builder builder = new VisionPortal.Builder();
 
             builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-            builder.setCameraResolution(new Size(640, 480));
+            builder.setCameraResolution(new Size(1280, 720));
             builder.enableLiveView(true); // Enable live preview of camera
             builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
             builder.setAutoStopLiveView(false);
@@ -291,7 +301,6 @@ public class AprilTagTest extends LinearOpMode {
             // Build the Vision Portal, using the above settings.
             visionPortal = builder.build();
         // end
-
     }
 
 }
