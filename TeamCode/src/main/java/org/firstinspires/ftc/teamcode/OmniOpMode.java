@@ -33,6 +33,7 @@ import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -48,6 +49,8 @@ public class OmniOpMode extends LinearOpMode {
     private DcMotor backLeftDrive = null;
     private DcMotor frontRightDrive = null;
     private DcMotor backRightDrive = null;
+
+    private Servo intake = null;
     // Set up to get Odometry Hub
     private GoBildaPinpointDriver OdometryHub = null;
     // Speed Control
@@ -61,7 +64,8 @@ public class OmniOpMode extends LinearOpMode {
         backLeftDrive = hardwareMap.get(DcMotor.class, "BL");
         frontRightDrive = hardwareMap.get(DcMotor.class, "FR");
         backRightDrive = hardwareMap.get(DcMotor.class, "BR");
-
+        // got intake servo
+        intake = hardwareMap.get(Servo.class, "Intake" );
         // Set the direction of the motors
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
         backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -106,6 +110,17 @@ public class OmniOpMode extends LinearOpMode {
             double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
             double lateral =  gamepad1.left_stick_x;
             double yaw     =  gamepad1.right_stick_x;
+
+            // intake control
+            if (gamepad1.x) {
+                intake.setPosition(intake.getPosition() + 0.2);
+            } else {
+                intake.setPosition(0);
+            }
+            // the control for shooting (still in progress)
+            if (gamepad1.left_trigger_pressed){
+                // TODO: Add shooting mechanism
+            }
 
             // Combine the joystick requests each wheel's power.
             double frontLeftPower  = axial + lateral + yaw;
